@@ -78,8 +78,8 @@ def download_dataset():
     full_dataset = dataset.train_test_split(test_size=0.2, shuffle=True)
     dataset_train = full_dataset["train"]
     dataset_valid = full_dataset["test"]
-    logging.info(dataset_train + "\n")
-    logging.info(dataset_valid + "\n")
+    logging.info(dataset_train)
+    logging.info(dataset_valid)
     logging.info("===Load dataset done===\n")
     return dataset_train, dataset_valid
 
