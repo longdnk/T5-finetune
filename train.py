@@ -68,6 +68,12 @@ def parse_args():
         default=500,
         help="Number of warmup steps (default: 500)",
     )
+    parser.add_argument(
+        "--torch_empty_cache_steps",
+        type=int,
+        default=200,
+        help="Number of steps between torch.cuda.empty_cache() calls (default: 200)",
+    )
     return parser.parse_args()
 
 
@@ -86,6 +92,7 @@ SAVE_TOTAL_LIMIT = args.save_total_limit
 FP16 = args.fp16
 BF16 = args.bf16
 WARMUP_STEPS = args.warmup_steps
+TORCH_EMPTY_CACHE_STEPS = args.torch_empty_cache_steps
 OUT_DIR = "results-" + MODEL
 
 
@@ -206,6 +213,7 @@ training_args = TrainingArguments(
     report_to="tensorboard",
     learning_rate=1e-4,
     dataloader_num_workers=4,
+    torch_empty_cache_steps=TORCH_EMPTY_CACHE_STEPS,
     fp16=FP16,
     bf16=BF16,
 )

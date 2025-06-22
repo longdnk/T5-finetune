@@ -34,7 +34,8 @@ python train.py \
   --eval_steps=200 \
   --save_steps=200 \
   --save_total_limit=2 \
-  --warmup_steps=500
+  --warmup_steps=500 \
+  torch_empty_cache_steps=200 \
   --bf16=True
 ```
 
