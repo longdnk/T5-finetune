@@ -203,3 +203,7 @@ print("===Done create trainer===")
 print("===Start training model===")
 history = trainer.train()
 print("===End training model===")
+
+print("===Save tokenizer===")
+tokenizer.save_pretrained(f"{OUT_DIR}-tokenizer")
+print("===Done save tokenizer===")
