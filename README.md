@@ -49,6 +49,6 @@ You can adjust the arguments as needed for your use case.
 ## Features
 - [x] Logging with tensorboard.
 - [x] Multi GPU training.
-- [ ] Config params.
+- [x] Config params training.
 - [ ] Run with MLFlow.
 - [ ] Online show tensorboard
