@@ -3,6 +3,7 @@ import pprint
 import evaluate
 import numpy as np
 import argparse
+import logging
 
 from transformers import (
     T5Tokenizer,
@@ -11,6 +12,11 @@ from transformers import (
     Trainer,
 )
 from datasets import load_dataset
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", force=True
+)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="T5 Fine-tuning Script")
@@ -69,18 +75,18 @@ OUT_DIR = "results-" + MODEL
 
 
 def load_dataset():
-    print("===Start load dataset===")
+    logging.info("===Start load dataset===")
     dataset = load_dataset(DATASET, split="train")
     full_dataset = dataset.train_test_split(test_size=0.2, shuffle=True)
     dataset_train = full_dataset["train"]
     dataset_valid = full_dataset["test"]
-    print(dataset_train)
-    print(dataset_valid)
-    print("===Load dataset done===")
+    logging.info(dataset_train)
+    logging.info(dataset_valid)
+    logging.info("===Load dataset done===")
     return dataset_train, dataset_valid
 
 
-print("===Init tokenizer and process data===")
+logging.info("===Init tokenizer and process data===")
 tokenizer = T5Tokenizer.from_pretrained(MODEL)
 
 
@@ -110,24 +116,24 @@ tokenized_train = dataset_train.map(
 tokenized_valid = dataset_valid.map(
     preprocess_function, batched=True, num_proc=NUM_PROCS
 )
-print("===Done init tokenizer and process data===")
+logging.info("===Done init tokenizer and process data===")
 
-print("===Init create model===")
+logging.info("===Init create model===")
 model = T5ForConditionalGeneration.from_pretrained(MODEL)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"===Load model on device: {device}===")
+logging.info(f"===Load model on device: {device}===")
 model.to(device)
-print("===Model done with===")
-print(model.eval())
+logging.info("===Model done with===")
+logging.info(model.eval())
 
 # Total parameters and trainable parameters.
 total_params = sum(p.numel() for p in model.parameters())
-print(f"{total_params:,} total parameters.")
+logging.info(f"{total_params:,} total parameters.")
 total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-print(f"{total_trainable_params:,} training parameters.")
-print("===Done create model step===")
+logging.info(f"{total_trainable_params:,} training parameters.")
+logging.info("===Done create model step===")
 
-print("===Add compute metrics===")
+logging.info("===Add compute metrics===")
 rouge = evaluate.load("rouge")
 
 
@@ -153,9 +159,9 @@ def compute_metrics(eval_pred):
     return {k: round(v, 4) for k, v in result.items()}
 
 
-print("===Done add compute metrics===")
+logging.info("===Done add compute metrics===")
 
-print("===Training model step===")
+logging.info("===Training model step===")
 
 
 def preprocess_logits_for_metrics(logits, labels):
@@ -167,7 +173,7 @@ def preprocess_logits_for_metrics(logits, labels):
     return pred_ids, labels
 
 
-print("===Add training arguments===")
+logging.info("===Add training arguments===")
 training_args = TrainingArguments(
     output_dir=OUT_DIR,
     num_train_epochs=EPOCHS,
@@ -187,9 +193,9 @@ training_args = TrainingArguments(
     fp16=FP16,
     bf16=BF16,
 )
-print("===Done add training arguments===")
+logging.info("===Done add training arguments===")
 
-print("===Create trainer===")
+logging.info("===Create trainer===")
 trainer = Trainer(
     model=model,
     args=training_args,
@@ -198,12 +204,12 @@ trainer = Trainer(
     preprocess_logits_for_metrics=preprocess_logits_for_metrics,
     compute_metrics=compute_metrics,
 )
-print("===Done create trainer===")
+logging.info("===Done create trainer===")
 
-print("===Start training model===")
+logging.info("===Start training model===")
 history = trainer.train()
-print("===End training model===")
+logging.info("===End training model===")
 
-print("===Save tokenizer===")
+logging.info("===Save tokenizer===")
 tokenizer.save_pretrained(f"{OUT_DIR}-tokenizer")
-print("===Done save tokenizer===")
+logging.info("===Done save tokenizer===")
