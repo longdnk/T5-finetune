@@ -46,8 +46,8 @@ def parse_args():
         default=2,
         help="Max number of checkpoints to keep",
     )
-    parser.add_argument("--fp_16", type=bool, default=False, action="store_true", help="Use fp16 mixed precision")
-    parser.add_argument("--bf_16", type=bool, default=False, action="store_true", help="Use bf16 mixed precision")
+    # parser.add_argument("--fp_16", type=bool, default=False, action="store_true", help="Use fp16 mixed precision")
+    # parser.add_argument("--bf_16", type=bool, default=False, action="store_true", help="Use bf16 mixed precision")
     return parser.parse_args()
 
 
@@ -63,8 +63,8 @@ LOGGING_STEPS = args.logging_steps
 EVAL_STEPS = args.eval_steps
 SAVE_STEPS = args.save_steps
 SAVE_TOTAL_LIMIT = args.save_total_limit
-FP16 = args.fp_16
-BF16 = args.bf_16
+FP16 = False
+BF16 = True
 OUT_DIR = "results-" + MODEL
 
 
