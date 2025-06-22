@@ -17,7 +17,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", force=True
 )
 
-
 def parse_args():
     parser = argparse.ArgumentParser(description="T5 Fine-tuning Script")
     parser.add_argument(
@@ -73,67 +72,75 @@ FP16 = False
 BF16 = True
 OUT_DIR = "results-" + MODEL
 
-
-def load_dataset():
-    logging.info("===Start load dataset===")
+def download_dataset():
+    logging.info("===Start load dataset===\n")
     dataset = load_dataset(DATASET, split="train")
     full_dataset = dataset.train_test_split(test_size=0.2, shuffle=True)
     dataset_train = full_dataset["train"]
     dataset_valid = full_dataset["test"]
-    logging.info(dataset_train)
-    logging.info(dataset_valid)
-    logging.info("===Load dataset done===")
+    logging.info(dataset_train + "\n")
+    logging.info(dataset_valid + "\n")
+    logging.info("===Load dataset done===\n")
     return dataset_train, dataset_valid
 
 
-logging.info("===Init tokenizer and process data===")
+logging.info("===Init tokenizer and process data===\n")
 tokenizer = T5Tokenizer.from_pretrained(MODEL)
-
 
 # Function to convert text data into model inputs and targets
 def preprocess_function(examples):
     inputs = [f"summarize: {article}" for article in examples["Articles"]]
     model_inputs = tokenizer(
-        inputs, max_length=MAX_LENGTH, truncation=True, padding="max_length"
+        inputs,
+        max_length=MAX_LENGTH,
+        truncation=True,
+        padding="max_length"
     )
 
     # Set up the tokenizer for targets
     targets = [summary for summary in examples["Summaries"]]
     with tokenizer.as_target_tokenizer():
         labels = tokenizer(
-            targets, max_length=MAX_LENGTH, truncation=True, padding="max_length"
+            targets,
+            max_length=MAX_LENGTH,
+            truncation=True,
+            padding="max_length"
         )
 
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
 
 
-dataset_train, dataset_valid = load_dataset()
+dataset_train, dataset_valid = download_dataset()
 # Apply the function to the whole dataset
 tokenized_train = dataset_train.map(
-    preprocess_function, batched=True, num_proc=NUM_PROCS
+    preprocess_function,
+    batched=True,
+    num_proc=NUM_PROCS
 )
 tokenized_valid = dataset_valid.map(
-    preprocess_function, batched=True, num_proc=NUM_PROCS
+    preprocess_function,
+    batched=True,
+    num_proc=NUM_PROCS
 )
-logging.info("===Done init tokenizer and process data===")
+logging.info("===Done init tokenizer and process data===\n")
 
-logging.info("===Init create model===")
+logging.info("===Init create model===\n")
 model = T5ForConditionalGeneration.from_pretrained(MODEL)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-logging.info(f"===Load model on device: {device}===")
+logging.info(f"===Load model on device: {device}===\n")
 model.to(device)
-logging.info("===Model done with===")
+logging.info("===Model done with===\n")
 logging.info(model.eval())
 
 # Total parameters and trainable parameters.
 total_params = sum(p.numel() for p in model.parameters())
-logging.info(f"{total_params:,} total parameters.")
+logging.info(f"{total_params:,} total parameters.\n")
 total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-logging.info(f"{total_trainable_params:,} training parameters.")
-logging.info("===Done create model step===")
+logging.info(f"{total_trainable_params:,} training parameters.\n")
+logging.info("===Done create model step===\n")
 
-logging.info("===Add compute metrics===")
+logging.info("===Add compute metrics===\n")
 rouge = evaluate.load("rouge")
 
 
@@ -158,11 +165,9 @@ def compute_metrics(eval_pred):
 
     return {k: round(v, 4) for k, v in result.items()}
 
+logging.info("===Done add compute metrics===\n")
 
-logging.info("===Done add compute metrics===")
-
-logging.info("===Training model step===")
-
+logging.info("===Training model step===\n")
 
 def preprocess_logits_for_metrics(logits, labels):
     """
@@ -172,8 +177,8 @@ def preprocess_logits_for_metrics(logits, labels):
     pred_ids = torch.argmax(logits[0], dim=-1)
     return pred_ids, labels
 
+logging.info("===Add training arguments===\n")
 
-logging.info("===Add training arguments===")
 training_args = TrainingArguments(
     output_dir=OUT_DIR,
     num_train_epochs=EPOCHS,
@@ -193,9 +198,9 @@ training_args = TrainingArguments(
     fp16=FP16,
     bf16=BF16,
 )
-logging.info("===Done add training arguments===")
+logging.info("===Done add training arguments===\n")
 
-logging.info("===Create trainer===")
+logging.info("===Create trainer===\n")
 trainer = Trainer(
     model=model,
     args=training_args,
@@ -204,12 +209,12 @@ trainer = Trainer(
     preprocess_logits_for_metrics=preprocess_logits_for_metrics,
     compute_metrics=compute_metrics,
 )
-logging.info("===Done create trainer===")
+logging.info("===Done create trainer===\n")
 
-logging.info("===Start training model===")
+logging.info("===Start training model===\n")
 history = trainer.train()
-logging.info("===End training model===")
+logging.info("===End training model===\n")
 
-logging.info("===Save tokenizer===")
+logging.info("===Save tokenizer===\n")
 tokenizer.save_pretrained(f"{OUT_DIR}-tokenizer")
-logging.info("===Done save tokenizer===")
+logging.info("===Done save tokenizer===\n")
