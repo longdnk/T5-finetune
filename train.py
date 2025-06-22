@@ -17,6 +17,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", force=True
 )
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="T5 Fine-tuning Script")
     parser.add_argument(
@@ -51,8 +52,22 @@ def parse_args():
         default=2,
         help="Max number of checkpoints to keep",
     )
-    # parser.add_argument("--fp_16", type=bool, default=False, action="store_true", help="Use fp16 mixed precision")
-    # parser.add_argument("--bf_16", type=bool, default=False, action="store_true", help="Use bf16 mixed precision")
+    parser.add_argument(
+        "--fp16",
+        default=False,
+        help="Use fp16 mixed precision (default: False)",
+    )
+    parser.add_argument(
+        "--bf16",
+        default=False,
+        help="Use bf16 mixed precision (default: False)",
+    )
+    parser.add_argument(
+        "--warmup_steps",
+        type=int,
+        default=500,
+        help="Number of warmup steps (default: 500)",
+    )
     return parser.parse_args()
 
 
@@ -68,9 +83,11 @@ LOGGING_STEPS = args.logging_steps
 EVAL_STEPS = args.eval_steps
 SAVE_STEPS = args.save_steps
 SAVE_TOTAL_LIMIT = args.save_total_limit
-FP16 = False
-BF16 = True
+FP16 = args.fp16
+BF16 = args.bf16
+WARMUP_STEPS = args.warmup_steps
 OUT_DIR = "results-" + MODEL
+
 
 def download_dataset():
     logging.info("===Start load dataset===\n")
@@ -87,24 +104,19 @@ def download_dataset():
 logging.info("===Init tokenizer and process data===\n")
 tokenizer = T5Tokenizer.from_pretrained(MODEL)
 
+
 # Function to convert text data into model inputs and targets
 def preprocess_function(examples):
     inputs = [f"summarize: {article}" for article in examples["Articles"]]
     model_inputs = tokenizer(
-        inputs,
-        max_length=MAX_LENGTH,
-        truncation=True,
-        padding="max_length"
+        inputs, max_length=MAX_LENGTH, truncation=True, padding="max_length"
     )
 
     # Set up the tokenizer for targets
     targets = [summary for summary in examples["Summaries"]]
     with tokenizer.as_target_tokenizer():
         labels = tokenizer(
-            targets,
-            max_length=MAX_LENGTH,
-            truncation=True,
-            padding="max_length"
+            targets, max_length=MAX_LENGTH, truncation=True, padding="max_length"
         )
 
     model_inputs["labels"] = labels["input_ids"]
@@ -114,14 +126,10 @@ def preprocess_function(examples):
 dataset_train, dataset_valid = download_dataset()
 # Apply the function to the whole dataset
 tokenized_train = dataset_train.map(
-    preprocess_function,
-    batched=True,
-    num_proc=NUM_PROCS
+    preprocess_function, batched=True, num_proc=NUM_PROCS
 )
 tokenized_valid = dataset_valid.map(
-    preprocess_function,
-    batched=True,
-    num_proc=NUM_PROCS
+    preprocess_function, batched=True, num_proc=NUM_PROCS
 )
 logging.info("===Done init tokenizer and process data===\n")
 
@@ -165,9 +173,11 @@ def compute_metrics(eval_pred):
 
     return {k: round(v, 4) for k, v in result.items()}
 
+
 logging.info("===Done add compute metrics===\n")
 
 logging.info("===Training model step===\n")
+
 
 def preprocess_logits_for_metrics(logits, labels):
     """
@@ -177,6 +187,7 @@ def preprocess_logits_for_metrics(logits, labels):
     pred_ids = torch.argmax(logits[0], dim=-1)
     return pred_ids, labels
 
+
 logging.info("===Add training arguments===\n")
 
 training_args = TrainingArguments(
@@ -184,7 +195,7 @@ training_args = TrainingArguments(
     num_train_epochs=EPOCHS,
     per_device_train_batch_size=BATCH_SIZE,
     per_device_eval_batch_size=BATCH_SIZE,
-    warmup_steps=500,
+    warmup_steps=WARMUP_STEPS,
     weight_decay=0.01,
     logging_dir=OUT_DIR,
     eval_strategy="steps",
